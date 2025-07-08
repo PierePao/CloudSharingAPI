@@ -23,7 +23,7 @@
       border-right: 1px solid #e0e0e0;
       box-shadow: 2px 0 8px rgba(0,0,0,0.04);
       display: flex;
-      flex-direction: column;
+      flex-direction: column;who
       align-items: center;
       padding-top: 40px;
       z-index: 1000;
@@ -233,44 +233,31 @@
 <body>
     <div id="drawer" class="drawer">
       <div class="drawer-header" style="display: flex; flex-direction: column; align-items: center;">
-        <img id="user-avatar" src="" alt="User Avatar" style="width:70px; height:70px; border-radius:50%; margin-bottom: 10px; object-fit:cover; background:#e0e0e0; display: none;" />
-        <div id="user-info" style="text-align: center; display: none;">
-          <div id="user-name" style="font-weight:700; font-size:1.1rem; color:#202124;"></div>
-          <div id="user-email" style="font-size:0.95rem; color:#5f6368;"></div>
+        <img src="assets/user.png" alt="User Avatar" style="width:70px; height:70px; border-radius:50%; margin-bottom: 10px; object-fit:cover; background:#e0e0e0;" />
+        <div style="text-align: center;">
+          <div style="font-weight:700; font-size:1.1rem; color:#202124;">John Doe</div>
+          <div style="font-size:0.95rem; color:#5f6368;">john.doe@email.com</div>
         </div>
-        <button id="auth-btn" class="signup-btn" style="margin-bottom: 30px; margin-top: 20px;">Sign In with Google</button>
+        <button class="signup-btn" style="margin-bottom: 30px; margin-top: 20px;">Log Out</button>
       </div>
     </div>
     <div class="main-content">
       <header>
         <h1>Drive</h1>
         <div style="display: flex; align-items: center; gap: 12px;">
-          <img src="assets/upload.png" alt="Upload Icon" style="width:28px; height:28px; margin-right: 6px;" />
           <button id="uploadBtn" class="signup-btn">Upload</button>
           <input type="file" id="fileInput" multiple style="display:none;" />
         </div>
       </header>
-      <main id="fileContainer">
-        <div class="file-card">
-          <img src="https://img.icons8.com/ios-filled/100/4285F4/pdf-2.png" alt="PDF Icon" />
-          <p>AnnualReport.pdf</p>
+      <main id="fileContainer" style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 400px;">
+        <div class="file-card" style="display: flex; flex-direction: column; align-items: center; margin-top: 120px; width: 260px; padding: 40px 0; box-shadow: 0 4px 20px rgba(0,0,0,0.10);">
+          <button id="centerUploadBtn" class="signup-btn" style="background: none; border: none; box-shadow: none; padding: 0; cursor: pointer;">
+            <img src="assets/uploadbw.png" alt="Upload Files" style="width:64px; height:64px;" />
+          </button>
+          <div style="font-size: 1.3rem; font-weight: 500; color: #111; margin-top: 18px;">Upload Files</div>
+          <input type="file" id="centerFileInput" multiple style="display:none;" />
         </div>
-        <div class="file-card">
-          <img src="https://img.icons8.com/ios-filled/100/EA4335/image.png" alt="Image Icon" />
-          <p>DesignMockup.png</p>
-        </div>
-        <div class="file-card">
-          <img src="https://img.icons8.com/ios-filled/100/FBBC05/ppt.png" alt="PPT Icon" />
-          <p>Marketing.pptx</p>
-        </div>
-        <div class="file-card">
-          <img src="https://img.icons8.com/ios-filled/100/34A853/word.png" alt="Word Icon" />
-          <p>Notes.docx</p>
-        </div>
-        <div class="file-card">
-          <img src="https://img.icons8.com/ios-filled/100/4285F4/folder-invoices--v1.png" alt="Folder Icon" />
-          <p>Projects</p>
-        </div>
+        <!-- Removed all default file cards as requested -->
       </main>
       <!-- Modal Preview -->
       <div id="previewModal" class="modal">
@@ -279,151 +266,10 @@
       </div>
     </div>
     <script>
-      const uploadBtn = document.getElementById('uploadBtn');
-      const fileContainer = document.getElementById('fileContainer');
-      const authBtn = document.getElementById('auth-btn');
-      const fileInput = document.getElementById('fileInput');
-
-      const previewModal = document.getElementById('previewModal');
-      const modalImage = document.getElementById('modalImage');
-      const closeModal = document.getElementById('closeModal');
-
-      authBtn.addEventListener('click', () => {
-        if (authBtn.textContent === 'Log Out') {
-          window.location.href = 'http://localhost:5001/logout';
-        } else {
-          window.location.href = 'http://localhost:5001/files';
-        }
-      });
-
-      async function getUserInfo() {
-        try {
-          const response = await fetch('http://localhost:5001/user');
-          const user = await response.json();
-
-          if (user.error) {
-            return;
-          }
-
-          document.getElementById('user-info').style.display = 'block';
-          document.getElementById('user-name').textContent = user.name;
-          document.getElementById('user-email').textContent = user.email;
-          document.getElementById('user-avatar').src = user.picture;
-          document.getElementById('user-avatar').style.display = 'block';
-
-        } catch (error) {
-          console.error('Error getting user info:', error);
-        }
-      }
-
-      async function loadFiles() {
-        try {
-          const response = await fetch('http://localhost:5001/files');
-          if (response.redirected) {
-            window.location.href = response.url;
-            return;
-          }
-          const data = await response.json();
-
-          if (data.error) {
-            // Not logged in, show Sign In button
-            authBtn.textContent = 'Sign In with Google';
-            return;
-          }
-
-          // Logged in, show Log Out button and user info
-          authBtn.textContent = 'Log Out';
-          getUserInfo();
-
-
-          fileContainer.innerHTML = ''; // Clear existing files
-
-          if (data.message) {
-            fileContainer.innerHTML = `<p>${data.message}</p>`;
-            return;
-          }
-
-          data.forEach(file => {
-            const card = document.createElement('div');
-            card.className = 'file-card';
-            
-            let iconURL = 'https://img.icons8.com/ios-filled/100/4285F4/document--v1.png';
-            if (file.name.endsWith('.pdf')) {
-              iconURL = 'https://img.icons8.com/ios-filled/100/4285F4/pdf-2.png';
-            } else if (file.name.endsWith('.ppt') || file.name.endsWith('.pptx')) {
-              iconURL = 'https://img.icons8.com/ios-filled/100/FBBC05/ppt.png';
-            } else if (file.name.endsWith('.doc') || file.name.endsWith('.docx')) {
-              iconURL = 'https://img.icons8.com/ios-filled/100/34A853/word.png';
-            } else if (file.name.includes('image')) { // A simple check
-              iconURL = 'https://img.icons8.com/ios-filled/100/EA4335/image.png';
-            }
-
-            card.innerHTML = `
-              <img src="${iconURL}" alt="File Icon" />
-              <p>${file.name}</p>
-            `;
-            fileContainer.appendChild(card);
-          });
-
-        } catch (error) {
-          console.error('Error loading files:', error);
-        }
-      }
-
-      uploadBtn.addEventListener('click', () => {
-        fileInput.click();
-      });
-
-      fileInput.addEventListener('change', async (event) => {
-        const files = event.target.files;
-        if (files.length === 0) return;
-
-        const formData = new FormData();
-        for (const file of files) {
-          formData.append('files', file);
-        }
-
-        try {
-          const response = await fetch('http://localhost:5001/upload', {
-            method: 'POST',
-            body: formData,
-          });
-
-          const data = await response.json();
-          console.log('Upload response:', data);
-
-          // Refresh the file list after upload
-          loadFiles();
-
-        } catch (error) {
-          console.error('Error uploading files:', error);
-        }
-      });
-
-      // Image preview modal
-      fileContainer.addEventListener('click', (event) => {
-        const fileCard = event.target.closest('.file-card');
-        if (!fileCard) return;
-
-        const img = fileCard.querySelector('img');
-        if (!img) return;
-
-        modalImage.src = img.src.replace('-v1.png', '-large.png');
-        previewModal.style.display = 'block';
-      });
-
-      closeModal.addEventListener('click', () => {
-        previewModal.style.display = 'none';
-      });
-
-      window.onclick = function(event) {
-        if (event.target == previewModal) {
-          previewModal.style.display = "none";
-        }
-      }
-
-      // Load files on page load
-      window.addEventListener('load', loadFiles);
+      // ...existing code...
+      document.getElementById('centerUploadBtn').onclick = function() {
+        document.getElementById('centerFileInput').click();
+      };
     </script>
   </body>
 </html>
