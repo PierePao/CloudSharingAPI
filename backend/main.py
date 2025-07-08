@@ -1,23 +1,48 @@
-from flask import Flask, jsonify, request, redirect, url_for, session
-from flask_cors import CORS
 import os
+import tempfile
+os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
+
+from flask import Flask, jsonify, request, redirect, url_for, session, send_from_directory
+from flask_session import Session
+from flask_cors import CORS
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
+from googleapiclient.http import MediaFileUpload
 
-app = Flask(__name__)
-app.secret_key = 'your_secret_key'  # Replace with a real secret key
-app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
-app.config['SESSION_COOKIE_SECURE'] = False # Set to True in production with HTTPS
+app = Flask(__name__, static_folder='../')
+app.config["SECRET_KEY"] = "a8d9f6c5b7e3a2d1f0c8b5a3d2e1f4g6h7j8k9l0m1n2o3p4q5r6s7t8"
+app.config["SESSION_TYPE"] = "filesystem"
+app.config["SESSION_FILE_DIR"] = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'flask_session')
 
-CORS(app)
+# Create the session directory if it doesn't exist
+os.makedirs(app.config["SESSION_FILE_DIR"], exist_ok=True)
+
+Session(app)
+
+CORS(app, supports_credentials=True)
 
 # This is a placeholder for a more secure way to store credentials
 CLIENT_SECRETS_FILE = "client_secrets.json"
-SCOPES = ['https://www.googleapis.com/auth/drive.metadata.readonly']
+SCOPES = [
+    'openid',
+    'https://www.googleapis.com/auth/userinfo.email',
+    'https://www.googleapis.com/auth/userinfo.profile',
+    'https://www.googleapis.com/auth/drive',
+    'https://www.googleapis.com/auth/drive.file',
+    'https://www.googleapis.com/auth/drive.metadata.readonly'
+]
 API_SERVICE_NAME = 'drive'
 API_VERSION = 'v3'
 REDIRECT_URI = 'http://localhost:5001/oauth2callback'
+
+@app.route('/')
+def index():
+    return send_from_directory(app.static_folder, 'index.html')
+
+@app.route('/assets/<path:filename>')
+def serve_assets(filename):
+    return send_from_directory(os.path.join(app.static_folder, 'assets'), filename)
 
 @app.route('/files', methods=['GET'])
 def list_files():
@@ -43,6 +68,44 @@ def list_files():
         # If credentials are bad, remove them from the session and re-authorize
         session.pop('credentials', None)
         return jsonify({"error": str(e)}), 500
+
+@app.route('/upload', methods=['POST'])
+def upload_file():
+    if 'credentials' not in session:
+        return jsonify({"error": "User not authenticated"}), 401
+
+    if 'files' not in request.files:
+        return jsonify({"error": "No file part"}), 400
+
+    files = request.files.getlist('files')
+    if not files or files[0].filename == '':
+        return jsonify({"error": "No selected file"}), 400
+
+    credentials = Credentials(**session['credentials'])
+    service = build(API_SERVICE_NAME, API_VERSION, credentials=credentials)
+
+    uploaded_files_info = []
+    for file in files:
+        try:
+            # It's good practice to save the file to a temporary location first
+            temp_dir = tempfile.gettempdir()
+            temp_path = os.path.join(temp_dir, file.filename)
+            file.save(temp_path)
+
+            file_metadata = {'name': file.filename}
+            media = MediaFileUpload(temp_path, mimetype=file.mimetype, resumable=True)
+            created_file = service.files().create(body=file_metadata,
+                                                media_body=media,
+                                                fields='id, name').execute()
+            uploaded_files_info.append(created_file)
+            
+            # Clean up the temporary file
+            os.remove(temp_path)
+
+        except Exception as e:
+            return jsonify({"error": f"An error occurred during upload: {e}"}), 500
+    
+    return jsonify({"message": "Files uploaded successfully", "uploaded_files": uploaded_files_info}), 200
 
 @app.route('/authorize')
 def authorize():
@@ -85,8 +148,12 @@ def oauth2callback():
         'scopes': credentials.scopes
     }
 
-    return redirect(url_for('list_files'))
+    return redirect(url_for('index'))
 
+@app.route('/logout')
+def logout():
+    session.pop('credentials', None)
+    return redirect(url_for('index'))
 
 if __name__ == '__main__':
     # This is for local development only.
