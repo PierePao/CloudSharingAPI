@@ -13,6 +13,56 @@
       color: #202124;
     }
 
+    .drawer {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 220px;
+      height: 100%;
+      background: #fff;
+      border-right: 1px solid #e0e0e0;
+      box-shadow: 2px 0 8px rgba(0,0,0,0.04);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding-top: 40px;
+      z-index: 1000;
+    }
+
+    .drawer-header {
+      margin-bottom: 40px;
+    }
+
+    .drawer-header h2 {
+      color: #4285F4;
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin: 0;
+    }
+
+    .signup-btn {
+      background: linear-gradient(135deg, #4285F4, #34A853);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 12px 32px;
+      font-size: 1rem;
+      font-weight: 500;
+      cursor: pointer;
+      margin-top: 20px;
+      transition: background 0.2s, box-shadow 0.2s;
+      box-shadow: 0 2px 8px rgba(66,133,244,0.08);
+    }
+
+    .signup-btn:hover {
+      background: linear-gradient(135deg, #34A853, #4285F4);
+      box-shadow: 0 6px 20px rgba(52, 168, 83, 0.15);
+    }
+
+    .main-content {
+      margin-left: 220px;
+    }
+
     header {
       display: flex;
       justify-content: space-between;
@@ -85,6 +135,20 @@
     }
 
     @media (max-width: 768px) {
+      .drawer {
+        width: 140px;
+        padding-top: 20px;
+      }
+      .main-content {
+        margin-left: 140px;
+      }
+      .drawer-header h2 {
+        font-size: 1.1rem;
+      }
+      .signup-btn {
+        padding: 8px 18px;
+        font-size: 0.9rem;
+      }
       header {
         flex-direction: column;
         gap: 10px;
@@ -145,112 +209,120 @@
   </style>
 </head>
 <body>
-  <header>
-    <h1>Drive</h1>
-    <button id="uploadBtn">Upload</button>
-    <input type="file" id="fileInput" multiple />
-  </header>
-
-  <main id="fileContainer">
-    <div class="file-card">
-      <img src="https://img.icons8.com/ios-filled/100/4285F4/pdf-2.png" alt="PDF Icon" />
-      <p>AnnualReport.pdf</p>
+    <div id="drawer" class="drawer">
+      <div class="drawer-header">
+        <h2>Drive</h2>
+      </div>
+      <button class="signup-btn">Sign Up</button>
     </div>
-    <div class="file-card">
-      <img src="https://img.icons8.com/ios-filled/100/EA4335/image.png" alt="Image Icon" />
-      <p>DesignMockup.png</p>
+    <div class="main-content">
+      <header>
+        <h1>Drive</h1>
+        <button id="uploadBtn">Upload</button>
+        <input type="file" id="fileInput" multiple />
+      </header>
+
+      <main id="fileContainer">
+        <div class="file-card">
+          <img src="https://img.icons8.com/ios-filled/100/4285F4/pdf-2.png" alt="PDF Icon" />
+          <p>AnnualReport.pdf</p>
+        </div>
+        <div class="file-card">
+          <img src="https://img.icons8.com/ios-filled/100/EA4335/image.png" alt="Image Icon" />
+          <p>DesignMockup.png</p>
+        </div>
+        <div class="file-card">
+          <img src="https://img.icons8.com/ios-filled/100/FBBC05/ppt.png" alt="PPT Icon" />
+          <p>Marketing.pptx</p>
+        </div>
+        <div class="file-card">
+          <img src="https://img.icons8.com/ios-filled/100/34A853/word.png" alt="Word Icon" />
+          <p>Notes.docx</p>
+        </div>
+        <div class="file-card">
+          <img src="https://img.icons8.com/ios-filled/100/4285F4/folder-invoices--v1.png" alt="Folder Icon" />
+          <p>Projects</p>
+        </div>
+      </main>
+
+      <!-- Modal Preview -->
+      <div id="previewModal" class="modal">
+        <span class="close" id="closeModal">&times;</span>
+        <img class="modal-content" id="modalImage">
+      </div>
     </div>
-    <div class="file-card">
-      <img src="https://img.icons8.com/ios-filled/100/FBBC05/ppt.png" alt="PPT Icon" />
-      <p>Marketing.pptx</p>
-    </div>
-    <div class="file-card">
-      <img src="https://img.icons8.com/ios-filled/100/34A853/word.png" alt="Word Icon" />
-      <p>Notes.docx</p>
-    </div>
-    <div class="file-card">
-      <img src="https://img.icons8.com/ios-filled/100/4285F4/folder-invoices--v1.png" alt="Folder Icon" />
-      <p>Projects</p>
-    </div>
-  </main>
 
-  <!-- Modal Preview -->
-  <div id="previewModal" class="modal">
-    <span class="close" id="closeModal">&times;</span>
-    <img class="modal-content" id="modalImage">
-  </div>
+    <script>
+      const uploadBtn = document.getElementById('uploadBtn');
+      const fileInput = document.getElementById('fileInput');
+      const fileContainer = document.getElementById('fileContainer');
 
-  <script>
-    const uploadBtn = document.getElementById('uploadBtn');
-    const fileInput = document.getElementById('fileInput');
-    const fileContainer = document.getElementById('fileContainer');
+      const previewModal = document.getElementById('previewModal');
+      const modalImg = document.getElementById('modalImage');
+      const closeModal = document.getElementById('closeModal');
 
-    const previewModal = document.getElementById('previewModal');
-    const modalImg = document.getElementById('modalImage');
-    const closeModal = document.getElementById('closeModal');
+      uploadBtn.addEventListener('click', () => {
+        fileInput.click();
+      });
 
-    uploadBtn.addEventListener('click', () => {
-      fileInput.click();
-    });
+      fileInput.addEventListener('change', (event) => {
+        const files = event.target.files;
 
-    fileInput.addEventListener('change', (event) => {
-      const files = event.target.files;
+        for (let i = 0; i < files.length; i++) {
+          const file = files[i];
+          const card = document.createElement('div');
+          card.className = 'file-card';
 
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        const card = document.createElement('div');
-        card.className = 'file-card';
+          if (file.type.includes('image')) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+              card.innerHTML = `
+                <img src="${e.target.result}" alt="Uploaded Image" />
+                <p>${file.name}</p>
+              `;
+              card.addEventListener('click', () => {
+                modalImg.src = e.target.result;
+                previewModal.style.display = "block";
+              });
+            };
+            reader.readAsDataURL(file);
+          } else {
+            let iconURL = 'https://img.icons8.com/ios-filled/100/4285F4/document--v1.png';
+            if (file.name.endsWith('.pdf')) {
+              iconURL = 'https://img.icons8.com/ios-filled/100/4285F4/pdf-2.png';
+            } else if (file.name.endsWith('.ppt') || file.name.endsWith('.pptx')) {
+              iconURL = 'https://img.icons8.com/ios-filled/100/FBBC05/ppt.png';
+            } else if (file.name.endsWith('.doc') || file.name.endsWith('.docx')) {
+              iconURL = 'https://img.icons8.com/ios-filled/100/34A853/word.png';
+            } else if (file.type.includes('video')) {
+              iconURL = 'https://img.icons8.com/ios-filled/100/FBBC05/video-file.png';
+            }
 
-        if (file.type.includes('image')) {
-          const reader = new FileReader();
-          reader.onload = function(e) {
             card.innerHTML = `
-              <img src="${e.target.result}" alt="Uploaded Image" />
+              <img src="${iconURL}" alt="File Icon" />
               <p>${file.name}</p>
             `;
+
             card.addEventListener('click', () => {
-              modalImg.src = e.target.result;
-              previewModal.style.display = "block";
+              alert(`Preview not available for this file type: ${file.name}`);
             });
-          };
-          reader.readAsDataURL(file);
-        } else {
-          let iconURL = 'https://img.icons8.com/ios-filled/100/4285F4/document--v1.png';
-          if (file.name.endsWith('.pdf')) {
-            iconURL = 'https://img.icons8.com/ios-filled/100/4285F4/pdf-2.png';
-          } else if (file.name.endsWith('.ppt') || file.name.endsWith('.pptx')) {
-            iconURL = 'https://img.icons8.com/ios-filled/100/FBBC05/ppt.png';
-          } else if (file.name.endsWith('.doc') || file.name.endsWith('.docx')) {
-            iconURL = 'https://img.icons8.com/ios-filled/100/34A853/word.png';
-          } else if (file.type.includes('video')) {
-            iconURL = 'https://img.icons8.com/ios-filled/100/FBBC05/video-file.png';
           }
 
-          card.innerHTML = `
-            <img src="${iconURL}" alt="File Icon" />
-            <p>${file.name}</p>
-          `;
-
-          card.addEventListener('click', () => {
-            alert(`Preview not available for this file type: ${file.name}`);
-          });
+          fileContainer.appendChild(card);
         }
 
-        fileContainer.appendChild(card);
-      }
+        fileInput.value = '';
+      });
 
-      fileInput.value = '';
-    });
-
-    closeModal.onclick = function() {
-      previewModal.style.display = "none";
-    }
-
-    window.onclick = function(event) {
-      if (event.target == previewModal) {
+      closeModal.onclick = function() {
         previewModal.style.display = "none";
       }
-    }
-  </script>
-</body>
+
+      window.onclick = function(event) {
+        if (event.target == previewModal) {
+          previewModal.style.display = "none";
+        }
+      }
+    </script>
+  </body>
 </html>
