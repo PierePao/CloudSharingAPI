@@ -24,14 +24,7 @@ CORS(app, supports_credentials=True)
 
 # This is a placeholder for a more secure way to store credentials
 CLIENT_SECRETS_FILE = "client_secrets.json"
-SCOPES = [
-    'openid',
-    'https://www.googleapis.com/auth/userinfo.email',
-    'https://www.googleapis.com/auth/userinfo.profile',
-    'https://www.googleapis.com/auth/drive',
-    'https://www.googleapis.com/auth/drive.file',
-    'https://www.googleapis.com/auth/drive.metadata.readonly'
-]
+SCOPES = ['https://www.googleapis.com/auth/drive', 'openid', 'https://www.googleapis.com/auth/userinfo.email', 'https://www.googleapis.com/auth/userinfo.profile']
 API_SERVICE_NAME = 'drive'
 API_VERSION = 'v3'
 REDIRECT_URI = 'http://localhost:5001/oauth2callback'
@@ -39,10 +32,6 @@ REDIRECT_URI = 'http://localhost:5001/oauth2callback'
 @app.route('/')
 def index():
     return send_from_directory(app.static_folder, 'index.html')
-
-@app.route('/assets/<path:filename>')
-def serve_assets(filename):
-    return send_from_directory(os.path.join(app.static_folder, 'assets'), filename)
 
 @app.route('/files', methods=['GET'])
 def list_files():
@@ -57,7 +46,7 @@ def list_files():
 
         # Call the Drive v3 API
         results = service.files().list(
-            pageSize=10, fields="nextPageToken, files(id, name)").execute()
+            pageSize=100, fields="nextPageToken, files(id, name, thumbnailLink, webContentLink, iconLink, mimeType)").execute()
         items = results.get('files', [])
 
         if not items:
@@ -68,44 +57,6 @@ def list_files():
         # If credentials are bad, remove them from the session and re-authorize
         session.pop('credentials', None)
         return jsonify({"error": str(e)}), 500
-
-@app.route('/upload', methods=['POST'])
-def upload_file():
-    if 'credentials' not in session:
-        return jsonify({"error": "User not authenticated"}), 401
-
-    if 'files' not in request.files:
-        return jsonify({"error": "No file part"}), 400
-
-    files = request.files.getlist('files')
-    if not files or files[0].filename == '':
-        return jsonify({"error": "No selected file"}), 400
-
-    credentials = Credentials(**session['credentials'])
-    service = build(API_SERVICE_NAME, API_VERSION, credentials=credentials)
-
-    uploaded_files_info = []
-    for file in files:
-        try:
-            # It's good practice to save the file to a temporary location first
-            temp_dir = tempfile.gettempdir()
-            temp_path = os.path.join(temp_dir, file.filename)
-            file.save(temp_path)
-
-            file_metadata = {'name': file.filename}
-            media = MediaFileUpload(temp_path, mimetype=file.mimetype, resumable=True)
-            created_file = service.files().create(body=file_metadata,
-                                                media_body=media,
-                                                fields='id, name').execute()
-            uploaded_files_info.append(created_file)
-            
-            # Clean up the temporary file
-            os.remove(temp_path)
-
-        except Exception as e:
-            return jsonify({"error": f"An error occurred during upload: {e}"}), 500
-    
-    return jsonify({"message": "Files uploaded successfully", "uploaded_files": uploaded_files_info}), 200
 
 @app.route('/authorize')
 def authorize():
@@ -153,7 +104,121 @@ def oauth2callback():
 @app.route('/logout')
 def logout():
     session.pop('credentials', None)
+    session.pop('user', None)
     return redirect(url_for('index'))
+
+@app.route('/user')
+def get_user_info():
+    if 'credentials' not in session:
+        return jsonify({'error': 'User not authenticated'})
+
+    credentials = Credentials(**session['credentials'])
+    
+    try:
+        oauth2_service = build('oauth2', 'v2', credentials=credentials)
+        user_info = oauth2_service.userinfo().get().execute()
+
+        session['user'] = user_info
+        return jsonify({
+            'name': user_info.get('name'),
+            'email': user_info.get('email'),
+            'picture': user_info.get('picture')
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)})
+
+@app.route('/upload', methods=['POST'])
+def upload_file():
+    if 'credentials' not in session:
+        return redirect('authorize')
+
+    credentials = Credentials(**session['credentials'])
+    service = build(API_SERVICE_NAME, API_VERSION, credentials=credentials)
+
+    if 'files' not in request.files:
+        return jsonify({'error': 'No file part'}), 400
+    
+    files = request.files.getlist('files')
+    
+    if not files or files[0].filename == '':
+        return jsonify({'error': 'No selected file'}), 400
+
+    uploaded_files = []
+    for file in files:
+        try:
+            # Save file to a temporary file
+            with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+                file.save(temp_file.name)
+                temp_file_path = temp_file.name
+
+            file_metadata = {'name': file.filename}
+            media = MediaFileUpload(temp_file_path, mimetype=file.mimetype)
+            
+            uploaded_file = service.files().create(
+                body=file_metadata,
+                media_body=media,
+                fields='id'
+            ).execute()
+            
+            uploaded_files.append(uploaded_file)
+            os.remove(temp_file_path) # Clean up the temporary file
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+            
+    return jsonify({'message': 'Files uploaded successfully', 'files': uploaded_files})
+
+@app.route('/files/<file_id>/rename', methods=['POST'])
+def rename_file(file_id):
+    if 'credentials' not in session:
+        return jsonify({"error": "Not authorized"}), 401
+
+    credentials = Credentials(**session['credentials'])
+    service = build(API_SERVICE_NAME, API_VERSION, credentials=credentials)
+
+    data = request.get_json()
+    new_name = data.get('new_name')
+
+    if not new_name:
+        return jsonify({"error": "New name not provided"}), 400
+
+    try:
+        service.files().update(fileId=file_id, body={'name': new_name}).execute()
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/files/<file_id>/delete', methods=['POST'])
+def delete_file(file_id):
+    if 'credentials' not in session:
+        return jsonify({"error": "Not authorized"}), 401
+
+    credentials = Credentials(**session['credentials'])
+    service = build(API_SERVICE_NAME, API_VERSION, credentials=credentials)
+
+    try:
+        service.files().delete(fileId=file_id).execute()
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/files/<file_id>', methods=['GET'])
+def get_file(file_id):
+    if 'credentials' not in session:
+        return jsonify({"error": "Not authorized"}), 401
+
+    credentials = Credentials(**session['credentials'])
+    service = build(API_SERVICE_NAME, API_VERSION, credentials=credentials)
+
+    try:
+        # Get file metadata
+        file_metadata = service.files().get(
+            fileId=file_id,
+            fields='id, name, thumbnailLink, webContentLink, iconLink'
+        ).execute()
+        return jsonify(file_metadata)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 
 if __name__ == '__main__':
     # This is for local development only.

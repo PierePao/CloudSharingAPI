@@ -228,6 +228,27 @@
       margin-right: 14px;
       font-size: 1.3rem;
     }
+
+    .context-menu {
+      display: none;
+      position: absolute;
+      background-color: white;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      z-index: 1000;
+      padding: 8px 0;
+    }
+
+    .context-menu-item {
+      padding: 10px 20px;
+      cursor: pointer;
+      font-size: 0.95rem;
+    }
+
+    .context-menu-item:hover {
+      background-color: #f5f6f8;
+    }
   </style>
 </head>
 <body>
@@ -272,6 +293,12 @@
           <p>Projects</p>
         </div>
       </main>
+      <!-- Context Menu -->
+      <div id="contextMenu" class="context-menu">
+        <div class="context-menu-item" id="rename-option">Rename</div>
+        <div class="context-menu-item" id="delete-option">Delete</div>
+        <div class="context-menu-item" id="preview-option">Preview</div>
+      </div>
       <!-- Modal Preview -->
       <div id="previewModal" class="modal">
         <span class="close" id="closeModal">&times;</span>
@@ -346,6 +373,8 @@
           data.forEach(file => {
             const card = document.createElement('div');
             card.className = 'file-card';
+            card.dataset.fileId = file.id;
+            card.dataset.fileName = file.name;
             
             let iconURL = 'https://img.icons8.com/ios-filled/100/4285F4/document--v1.png';
             if (file.name.endsWith('.pdf')) {
@@ -424,6 +453,105 @@
 
       // Load files on page load
       window.addEventListener('load', loadFiles);
+
+      const contextMenu = document.getElementById('contextMenu');
+      const renameOption = document.getElementById('rename-option');
+      const deleteOption = document.getElementById('delete-option');
+      const previewOption = document.getElementById('preview-option');
+      let selectedFileId = null;
+      let selectedFileName = null;
+
+      fileContainer.addEventListener('contextmenu', (event) => {
+        event.preventDefault();
+        const fileCard = event.target.closest('.file-card');
+        if (!fileCard) return;
+
+        selectedFileId = fileCard.dataset.fileId;
+        selectedFileName = fileCard.dataset.fileName;
+
+        contextMenu.style.top = `${event.clientY}px`;
+        contextMenu.style.left = `${event.clientX}px`;
+        contextMenu.style.display = 'block';
+      });
+
+      window.addEventListener('click', () => {
+        contextMenu.style.display = 'none';
+      });
+
+      renameOption.addEventListener('click', async () => {
+        if (!selectedFileId) return;
+        const newName = prompt('Enter new name:', selectedFileName);
+        if (newName && newName !== selectedFileName) {
+          try {
+            const response = await fetch(`http://localhost:5001/files/${selectedFileId}/rename`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ new_name: newName }),
+            });
+            const data = await response.json();
+            if (data.success) {
+              loadFiles();
+            } else {
+              alert('Error renaming file: ' + (data.message || 'Unknown error'));
+            }
+          } catch (error) {
+            console.error('Error renaming file:', error);
+            alert('Error renaming file.');
+          }
+        }
+      });
+
+      deleteOption.addEventListener('click', async () => {
+        if (!selectedFileId) return;
+        if (confirm(`Are you sure you want to delete ${selectedFileName}?`)) {
+          try {
+            const response = await fetch(`http://localhost:5001/files/${selectedFileId}/delete`, {
+              method: 'POST',
+            });
+            const data = await response.json();
+            if (data.success) {
+              loadFiles();
+            } else {
+              alert('Error deleting file: ' + (data.message || 'Unknown error'));
+            }
+          } catch (error) {
+            console.error('Error deleting file:', error);
+            alert('Error deleting file.');
+          }
+        }
+      });
+
+      previewOption.addEventListener('click', async () => {
+        if (!selectedFileId) return;
+
+        try {
+            const response = await fetch(`http://localhost:5001/files/${selectedFileId}`);
+            const file = await response.json();
+
+            if (file.thumbnailLink) {
+                modalImage.src = file.thumbnailLink;
+                previewModal.style.display = 'block';
+            } else if (file.webContentLink) {
+                window.open(file.webContentLink, '_blank');
+            } else if (selectedFileName.match(/\.(jpeg|jpg|gif|png)$/i)) {
+                const fileCard = document.querySelector(`.file-card[data-file-id="${selectedFileId}"]`);
+                if (fileCard) {
+                    const img = fileCard.querySelector('img');
+                    if (img) {
+                        modalImage.src = img.src;
+                        previewModal.style.display = 'block';
+                    }
+                }
+            } else {
+                alert("No preview available for this file type.");
+            }
+        } catch (error) {
+            console.error('Error getting file preview:', error);
+            alert('Could not retrieve file preview.');
+        }
+      });
     </script>
   </body>
 </html>
