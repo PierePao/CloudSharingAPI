@@ -24,7 +24,15 @@ CORS(app, supports_credentials=True)
 
 # This is a placeholder for a more secure way to store credentials
 CLIENT_SECRETS_FILE = "client_secrets.json"
-SCOPES = ['https://www.googleapis.com/auth/drive', 'openid', 'https://www.googleapis.com/auth/userinfo.email', 'https://www.googleapis.com/auth/userinfo.profile']
+SCOPES = [
+    'openid',
+    'https://www.googleapis.com/auth/userinfo.email',
+    'https://www.googleapis.com/auth/userinfo.profile',
+    'https://www.googleapis.com/auth/drive',
+    'https://www.googleapis.com/auth/drive.file',
+    'https://www.googleapis.com/auth/drive.metadata.readonly'
+]
+
 API_SERVICE_NAME = 'drive'
 API_VERSION = 'v3'
 REDIRECT_URI = 'http://localhost:5001/oauth2callback'
