@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Drive Clone</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Poppins', sans-serif;
+      background: #f5f6f8;
+      color: #202124;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 30px;
+      background: #ffffff;
+      border-bottom: 1px solid #e0e0e0;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    }
+
+    header h1 {
+      font-weight: 700;
+      font-size: 1.4rem;
+      color: #4285F4;
+    }
+
+    header button {
+      background: linear-gradient(135deg, #34A853, #FBBC05);
+      border: none;
+      color: white;
+      padding: 8px 18px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    header button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(52, 168, 83, 0.3);
+    }
+
+    main {
+      padding: 40px 50px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 30px;
+    }
+
+    .file-card {
+      background: white;
+      border-radius: 12px;
+      border: 1px solid #e0e0e0;
+      padding: 20px;
+      text-align: center;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+      transition: transform 0.3s, box-shadow 0.3s;
+      word-break: break-all;
+      cursor: pointer;
+    }
+
+    .file-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 12px 25px rgba(0,0,0,0.1);
+    }
+
+    .file-card img {
+      width: 60px;
+      margin-bottom: 15px;
+      object-fit: cover;
+      border-radius: 8px;
+      max-height: 100px;
+    }
+
+    .file-card p {
+      margin: 0;
+      font-weight: 500;
+      font-size: 0.95rem;
+    }
+
+    @media (max-width: 768px) {
+      header {
+        flex-direction: column;
+        gap: 10px;
+        text-align: center;
+      }
+      main {
+        padding: 20px;
+        gap: 20px;
+      }
+    }
+
+    #fileInput {
+      display: none;
+    }
+
+    /* Modal styling */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 999;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0,0,0,0.8);
+    }
+
+    .modal-content {
+      margin: 5% auto;
+      display: block;
+      max-width: 80%;
+      max-height: 80%;
+      border-radius: 8px;
+      box-shadow: 0 4px 30px rgba(0,0,0,0.5);
+      animation: fadeIn 0.3s;
+    }
+
+    .close {
+      position: absolute;
+      top: 30px;
+      right: 50px;
+      color: white;
+      font-size: 40px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    .close:hover {
+      color: #ccc;
+    }
+
+    @keyframes fadeIn {
+      from {opacity: 0;}
+      to {opacity: 1;}
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Drive</h1>
+    <button id="uploadBtn">Upload</button>
+    <input type="file" id="fileInput" multiple />
+  </header>
+
+  <main id="fileContainer">
+    <div class="file-card">
+      <img src="https://img.icons8.com/ios-filled/100/4285F4/pdf-2.png" alt="PDF Icon" />
+      <p>AnnualReport.pdf</p>
+    </div>
+    <div class="file-card">
+      <img src="https://img.icons8.com/ios-filled/100/EA4335/image.png" alt="Image Icon" />
+      <p>DesignMockup.png</p>
+    </div>
+    <div class="file-card">
+      <img src="https://img.icons8.com/ios-filled/100/FBBC05/ppt.png" alt="PPT Icon" />
+      <p>Marketing.pptx</p>
+    </div>
+    <div class="file-card">
+      <img src="https://img.icons8.com/ios-filled/100/34A853/word.png" alt="Word Icon" />
+      <p>Notes.docx</p>
+    </div>
+    <div class="file-card">
+      <img src="https://img.icons8.com/ios-filled/100/4285F4/folder-invoices--v1.png" alt="Folder Icon" />
+      <p>Projects</p>
+    </div>
+  </main>
+
+  <!-- Modal Preview -->
+  <div id="previewModal" class="modal">
+    <span class="close" id="closeModal">&times;</span>
+    <img class="modal-content" id="modalImage">
+  </div>
+
+  <script>
+    const uploadBtn = document.getElementById('uploadBtn');
+    const fileInput = document.getElementById('fileInput');
+    const fileContainer = document.getElementById('fileContainer');
+
+    const previewModal = document.getElementById('previewModal');
+    const modalImg = document.getElementById('modalImage');
+    const closeModal = document.getElementById('closeModal');
+
+    uploadBtn.addEventListener('click', () => {
+      fileInput.click();
+    });
+
+    fileInput.addEventListener('change', (event) => {
+      const files = event.target.files;
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const card = document.createElement('div');
+        card.className = 'file-card';
+
+        if (file.type.includes('image')) {
+          const reader = new FileReader();
+          reader.onload = function(e) {
+            card.innerHTML = `
+              <img src="${e.target.result}" alt="Uploaded Image" />
+              <p>${file.name}</p>
+            `;
+            card.addEventListener('click', () => {
+              modalImg.src = e.target.result;
+              previewModal.style.display = "block";
+            });
+          };
+          reader.readAsDataURL(file);
+        } else {
+          let iconURL = 'https://img.icons8.com/ios-filled/100/4285F4/document--v1.png';
+          if (file.name.endsWith('.pdf')) {
+            iconURL = 'https://img.icons8.com/ios-filled/100/4285F4/pdf-2.png';
+          } else if (file.name.endsWith('.ppt') || file.name.endsWith('.pptx')) {
+            iconURL = 'https://img.icons8.com/ios-filled/100/FBBC05/ppt.png';
+          } else if (file.name.endsWith('.doc') || file.name.endsWith('.docx')) {
+            iconURL = 'https://img.icons8.com/ios-filled/100/34A853/word.png';
+          } else if (file.type.includes('video')) {
+            iconURL = 'https://img.icons8.com/ios-filled/100/FBBC05/video-file.png';
+          }
+
+          card.innerHTML = `
+            <img src="${iconURL}" alt="File Icon" />
+            <p>${file.name}</p>
+          `;
+
+          card.addEventListener('click', () => {
+            alert(`Preview not available for this file type: ${file.name}`);
+          });
+        }
+
+        fileContainer.appendChild(card);
+      }
+
+      fileInput.value = '';
+    });
+
+    closeModal.onclick = function() {
+      previewModal.style.display = "none";
+    }
+
+    window.onclick = function(event) {
+      if (event.target == previewModal) {
+        previewModal.style.display = "none";
+      }
+    }
+  </script>
+</body>
+</html>
