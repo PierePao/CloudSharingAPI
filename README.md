@@ -1,6 +1,6 @@
 # CloudSharingAPI
 
-This project allows you to share files using a GDrive.
+This project allows you to share files using GDrive.
 
 ## Running the application
 
